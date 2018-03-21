@@ -6,7 +6,7 @@ class FreeImageConan(ConanFile):
     name = 'freeimage'
 
     source_version = '3.17.0'
-    package_version = '1'
+    package_version = '2'
     version = '%s-%s' % (source_version, package_version)
 
     requires = 'llvm/3.3-1@vuo/stable'
@@ -42,10 +42,10 @@ class FreeImageConan(ConanFile):
             # but this package doesn't need to link with them.
             autotools.libs = []
 
-            autotools.cxx_flags.append('-Oz')
+            autotools.flags.append('-Oz')
 
             if platform.system() == 'Darwin':
-                autotools.cxx_flags.append('-mmacosx-version-min=10.10')
+                autotools.flags.append('-mmacosx-version-min=10.10')
 
             env_vars = {
                 'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
