@@ -47,6 +47,8 @@ class FreeImageConan(ConanFile):
             self.run('bash gensrclist.sh')
 
         self.run('mv %s/license-fi.txt %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+        if platform.system() == 'Darwin':
+            self.run('mv %s/Source/LibJPEG/LICENSE.txt %s/libjpeg-turbo.txt' % (self.source_dir, self.source_dir, self.name))
 
     def build(self):
         import VuoUtils
@@ -106,6 +108,7 @@ class FreeImageConan(ConanFile):
         self.copy('libfreeimage.%s' % libext, src=self.source_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
+        self.copy('libjpeg-turbo.txt' % self.name, src=self.source_dir, dst='license')
 
     def package_info(self):
         self.cpp_info.libs = ['freeimage']
