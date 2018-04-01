@@ -34,6 +34,8 @@ class FreeImageConan(ConanFile):
         with tools.chdir(self.source_dir):
             self.run('bash gensrclist.sh')
 
+        self.run('mv %s/license-fi.txt %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
+
     def build(self):
         with tools.chdir('%s/Source/LibJPEG' % self.source_dir):
             autotools = AutoToolsBuildEnvironment(self)
@@ -68,6 +70,8 @@ class FreeImageConan(ConanFile):
     def package(self):
         self.copy('FreeImage.h', src='%s/Source' % self.source_dir, dst='include')
         self.copy('*.dylib', src=self.source_dir, dst='lib')
+
+        self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
 
     def package_info(self):
         self.cpp_info.libs = ['freeimage']
