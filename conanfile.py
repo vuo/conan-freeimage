@@ -108,7 +108,7 @@ class FreeImageConan(ConanFile):
         self.copy('libfreeimage.%s' % libext, src=self.source_dir, dst='lib')
 
         self.copy('%s.txt' % self.name, src=self.source_dir, dst='license')
-        self.copy('libjpeg-turbo.txt' % self.name, src=self.source_dir, dst='license')
+        self.copy('libjpeg-turbo.txt', src=self.source_dir, dst='license')
 
     def package_info(self):
         self.cpp_info.libs = ['freeimage']
