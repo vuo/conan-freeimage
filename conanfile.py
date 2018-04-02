@@ -48,7 +48,7 @@ class FreeImageConan(ConanFile):
 
         self.run('mv %s/license-fi.txt %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
         if platform.system() == 'Darwin':
-            self.run('mv %s/Source/LibJPEG/LICENSE.txt %s/libjpeg-turbo.txt' % (self.source_dir, self.source_dir, self.name))
+            self.run('mv %s/Source/LibJPEG/LICENSE.txt %s/libjpeg-turbo.txt' % (self.source_dir, self.source_dir))
 
     def build(self):
         import VuoUtils
