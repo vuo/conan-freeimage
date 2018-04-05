@@ -31,7 +31,7 @@ class FreeImageConan(ConanFile):
         tools.get('http://downloads.sourceforge.net/freeimage/FreeImage3170.zip',
                   sha256='fbfc65e39b3d4e2cb108c4ffa8c41fd02c07d4d436c594fff8dab1a6d5297f89')
         tools.patch(patch_file='makefile.patch', base_path=self.source_dir)
-        tools.replace_in_file('Makefile.gnu', 'LIBRARIES = -lstdc++', 'LIBRARIES = -lc++')
+        tools.replace_in_file('%s/Makefile.gnu' % self.source_dir, 'LIBRARIES = -lstdc++', 'LIBRARIES = -lc++')
 
         # For now, disable libjpeg-turbo on Linux since it fails with 'undefined symbol: jpeg_resync_to_restart'.
         if platform.system() == 'Darwin':
