@@ -9,7 +9,7 @@ class FreeImageConan(ConanFile):
     package_version = '3'
     version = '%s-%s' % (source_version, package_version)
 
-    requires = 'llvm/3.3-2@vuo/stable', \
+    build_requires = 'llvm/3.3-5@vuo/stable', \
                'vuoutils/1.0@vuo/stable'
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://freeimage.sourceforge.net/'

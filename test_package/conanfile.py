@@ -4,6 +4,8 @@ import platform
 class FreeImageTestConan(ConanFile):
     generators = 'qbs'
 
+    requires = 'llvm/3.3-5@vuo/stable'
+
     def build(self):
         self.run('qbs -f "%s"' % self.source_folder)
 
