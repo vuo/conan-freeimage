@@ -13,9 +13,9 @@
 -COMPILERFLAGS = -Os -fexceptions -fvisibility=hidden -DNO_LCMS
 -COMPILERFLAGS_PPC = -arch ppc
 -COMPILERFLAGS_I386 = -arch i386
-+CC_X86_64 = bin/clang
-+CPP_X86_64 = bin/clang++
-+COMPILERFLAGS = -Oz -fexceptions -fvisibility=hidden -D__ANSI__ -mmacosx-version-min=10.10 -DDISABLE_PERF_MEASUREMENT 
++CC_X86_64 = $(CC)
++CPP_X86_64 = $(CXX)
++COMPILERFLAGS = -Oz -fexceptions -fvisibility=hidden -D__ANSI__ -mmacosx-version-min=10.10 -DDISABLE_PERF_MEASUREMENT $(CFLAGS)
  COMPILERFLAGS_X86_64 = -arch x86_64
 -COMPILERPPFLAGS = -Wno-ctor-dtor-privacy
 -INCLUDE += 
@@ -24,7 +24,7 @@
 -INCLUDE_X86_64 = -isysroot /Developer/SDKs/MacOSX10.6.sdk
 -CFLAGS_PPC = $(COMPILERFLAGS) $(COMPILERFLAGS_PPC) $(INCLUDE) $(INCLUDE_PPC)
 -CFLAGS_I386 = $(COMPILERFLAGS) $(COMPILERFLAGS_I386) $(INCLUDE) $(INCLUDE_I386)
-+COMPILERPPFLAGS = -Wno-ctor-dtor-privacy -D__ANSI__ -stdlib=libstdc++
++COMPILERPPFLAGS = -Wno-ctor-dtor-privacy -D__ANSI__ -stdlib=libc++
  CFLAGS_X86_64 = $(COMPILERFLAGS) $(COMPILERFLAGS_X86_64) $(INCLUDE) $(INCLUDE_X86_64)
 -CPPFLAGS_PPC = $(COMPILERPPFLAGS) $(CFLAGS_PPC)
 -CPPFLAGS_I386 = $(COMPILERPPFLAGS) $(CFLAGS_I386)

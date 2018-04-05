@@ -27,10 +27,6 @@ class FreeImageConan(ConanFile):
         elif platform.system() != 'Darwin':
             raise Exception('Unknown platform "%s"' % platform.system())
 
-    def imports(self):
-        self.copy('*', '%s/bin' % self.source_dir, 'bin')
-        self.copy('*', '%s/lib' % self.source_dir, 'lib')
-
     def source(self):
         tools.get('http://downloads.sourceforge.net/freeimage/FreeImage3170.zip',
                   sha256='fbfc65e39b3d4e2cb108c4ffa8c41fd02c07d4d436c594fff8dab1a6d5297f89')
@@ -88,6 +84,9 @@ class FreeImageConan(ConanFile):
                     autotools.make(args=['--quiet'])
 
         with tools.chdir(self.source_dir):
+            env_vars['CFLAGS'] = '-I' + ' -I'.join(self.deps_cpp_info['llvm'].include_paths)
+            env_vars['LIBRARIES_X86_64'] = '-stdlib=libc++ -L%s/lib -lc++ -lc++abi' % self.deps_cpp_info['llvm'].rootpath
+            self.output.info(env_vars['LIBRARIES_X86_64'])
             with tools.environment_append(env_vars):
                 self.run('make -j9')
 
