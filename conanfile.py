@@ -56,7 +56,7 @@ class FreeImageConan(ConanFile):
 
         env_vars = {
             'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
-            'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++',
+            'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++ -stdlib=libc++',
             'NASM': yasm,
         }
 
@@ -86,7 +86,6 @@ class FreeImageConan(ConanFile):
         with tools.chdir(self.source_dir):
             env_vars['CFLAGS'] = '-I' + ' -I'.join(self.deps_cpp_info['llvm'].include_paths)
             env_vars['LIBRARIES_X86_64'] = '-stdlib=libc++ -L%s/lib -lc++ -lc++abi' % self.deps_cpp_info['llvm'].rootpath
-            self.output.info(env_vars['LIBRARIES_X86_64'])
             with tools.environment_append(env_vars):
                 self.run('make -j9')
 
