@@ -6,7 +6,7 @@ class FreeImageConan(ConanFile):
     name = 'freeimage'
 
     source_version = '3.17.0'
-    package_version = '3'
+    package_version = '4'
     version = '%s-%s' % (source_version, package_version)
 
     build_requires = 'llvm/3.3-5@vuo/stable', \
