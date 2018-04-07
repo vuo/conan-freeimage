@@ -92,6 +92,7 @@ class FreeImageConan(ConanFile):
 
             if platform.system() == 'Darwin':
                 self.run('mv libfreeimage-%s.dylib-x86_64 libfreeimage.dylib' % self.source_version)
+                self.run('install_name_tool -change @rpath/libc++.dylib /usr/lib/libc++.1.dylib libfreeimage.dylib')
             elif platform.system() == 'Linux':
                 self.run('mv libfreeimage-%s.so libfreeimage.so' % self.source_version)
 
