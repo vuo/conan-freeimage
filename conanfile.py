@@ -1,25 +1,31 @@
-from conans import AutoToolsBuildEnvironment, ConanFile, tools
+from conans import ConanFile, CMake, tools
 import platform
 import os
 
 class FreeImageConan(ConanFile):
     name = 'freeimage'
 
-    source_version = '3.17.0'
-    package_version = '4'
-    version = '%s-%s' % (source_version, package_version)
+    freeimage_version = '3.18.0'
+    libjpegturbo_version = '2.0.5'
+    package_version = '0'
+    version = '%s-%s' % (freeimage_version, package_version)
 
-    build_requires = 'llvm/3.3-5@vuo/stable', \
-               'vuoutils/1.0@vuo/stable'
+    build_requires = (
+        'llvm/5.0.2-1@vuo/stable',
+        'macos-sdk/11.0-0@vuo/stable',
+    )
     settings = 'os', 'compiler', 'build_type', 'arch'
     url = 'http://freeimage.sourceforge.net/'
     license = 'http://freeimage.sourceforge.net/license.html'
     description = 'A library to read and write many image formats'
     source_dir = 'FreeImage'
+
+    build_libjpegturbo_x86_dir = '_build_libjpegturbo_x86'
+    build_libjpegturbo_arm_dir = '_build_libjpegturbo_arm'
+    install_libjpegturbo_x86_dir = '_install_libjpegturbo_x86'
+    install_libjpegturbo_arm_dir = '_install_libjpegturbo_arm'
+
     exports_sources = '*.patch'
-    libs = {
-        'freeimage': 3,
-    }
 
     def requirements(self):
         if platform.system() == 'Linux':
@@ -28,75 +34,85 @@ class FreeImageConan(ConanFile):
             raise Exception('Unknown platform "%s"' % platform.system())
 
     def source(self):
-        tools.get('http://downloads.sourceforge.net/freeimage/FreeImage3170.zip',
-                  sha256='fbfc65e39b3d4e2cb108c4ffa8c41fd02c07d4d436c594fff8dab1a6d5297f89')
+        tools.get('http://downloads.sourceforge.net/freeimage/FreeImage3180.zip',
+                  sha256='f41379682f9ada94ea7b34fe86bf9ee00935a3147be41b6569c9605a53e438fd')
         tools.patch(patch_file='makefile.patch', base_path=self.source_dir)
+        tools.patch(patch_file='zlib.patch', base_path=self.source_dir)
+        tools.patch(patch_file='jxr.patch', base_path=self.source_dir)
+        tools.patch(patch_file='jpeg.patch', base_path=self.source_dir)
         tools.replace_in_file('%s/Makefile.gnu' % self.source_dir, 'LIBRARIES = -lstdc++', 'LIBRARIES = -lc++')
 
         # For now, disable libjpeg-turbo on Linux since it fails with 'undefined symbol: jpeg_resync_to_restart'.
         if platform.system() == 'Darwin':
             self.run('rm -Rf %s/Source/LibJPEG' % self.source_dir)
-            tools.get('http://downloads.sourceforge.net/project/libjpeg-turbo/1.4.2/libjpeg-turbo-1.4.2.tar.gz',
-                      sha256='521bb5d3043e7ac063ce3026d9a59cc2ab2e9636c655a2515af5f4706122233e')
-            self.run('mv libjpeg-turbo-1.4.2 %s/Source/LibJPEG' % self.source_dir)
+            tools.get('http://downloads.sourceforge.net/project/libjpeg-turbo/%s/libjpeg-turbo-%s.tar.gz' % (self.libjpegturbo_version, self.libjpegturbo_version),
+                      sha256='16f8f6f2715b3a38ab562a84357c793dd56ae9899ce130563c72cd93d8357b5d')
+            self.run('mv libjpeg-turbo-%s %s/Source/LibJPEG' % (self.libjpegturbo_version, self.source_dir))
 
         with tools.chdir(self.source_dir):
             self.run('bash gensrclist.sh')
 
         self.run('mv %s/license-fi.txt %s/%s.txt' % (self.source_dir, self.source_dir, self.name))
         if platform.system() == 'Darwin':
-            self.run('mv %s/Source/LibJPEG/LICENSE.txt %s/libjpeg-turbo.txt' % (self.source_dir, self.source_dir))
+            self.run('cp %s/Source/LibJPEG/LICENSE.md %s/libjpeg-turbo.txt' % (self.source_dir, self.source_dir))
 
     def build(self):
-        import VuoUtils
-
         if platform.system() == 'Darwin':
-            yasm = '/usr/local/bin/yasm'
-        elif platform.system() == 'Linux':
-            yasm = '/usr/bin/yasm'
+            cmake = CMake(self)
 
-        env_vars = {
-            'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
-            'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++ -stdlib=libc++',
-            'NASM': yasm,
-        }
+            cmake.definitions['CMAKE_BUILD_TYPE'] = 'Release'
+            cmake.definitions['CMAKE_C_COMPILER'] = '%s/bin/clang'   % self.deps_cpp_info['llvm'].rootpath
+            cmake.definitions['CMAKE_C_FLAGS_RELEASE'] = '-Oz -DNDEBUG'
+            cmake.definitions['CMAKE_INSTALL_NAME_DIR'] = '@rpath'
+            cmake.definitions['CMAKE_OSX_DEPLOYMENT_TARGET'] = '10.11'
+            cmake.definitions['CMAKE_OSX_SYSROOT'] = self.deps_cpp_info['macos-sdk'].rootpath
+            cmake.definitions['ENABLE_SHARED'] = 'OFF'
+            cmake.definitions['ENABLE_STATIC'] = 'ON'
 
-        if platform.system() == 'Darwin':
-            with tools.chdir('%s/Source/LibJPEG' % self.source_dir):
-                autotools = AutoToolsBuildEnvironment(self)
+            self.output.info("=== Build libjpeg-turbo for x86_64 ===")
+            tools.mkdir(self.build_libjpegturbo_x86_dir)
+            with tools.chdir(self.build_libjpegturbo_x86_dir):
+                cmake.definitions['CMAKE_OSX_ARCHITECTURES'] = 'x86_64'
+                cmake.definitions['CMAKE_INSTALL_PREFIX'] = '%s/../%s' % (os.getcwd(), self.install_libjpegturbo_x86_dir)
+                cmake.configure(source_dir='../%s/Source/LibJPEG' % self.source_dir,
+                                build_dir='.')
+                cmake.build()
+                cmake.install()
 
-                # The LLVM/Clang libs get automatically added by the `requires` line,
-                # but this package doesn't need to link with them.
-                autotools.libs = []
+            self.output.info("=== Build libjpeg-turbo for arm64 ===")
+            tools.mkdir(self.build_libjpegturbo_arm_dir)
+            with tools.chdir(self.build_libjpegturbo_arm_dir):
+                cmake.definitions['CMAKE_CROSSCOMPILING'] = 'ON'
+                cmake.definitions['CMAKE_OSX_ARCHITECTURES'] = 'arm64'
+                cmake.definitions['CMAKE_SYSTEM_NAME'] = 'Darwin'
+                cmake.definitions['CMAKE_SYSTEM_PROCESSOR'] = 'arm64'
+                cmake.definitions['CMAKE_INSTALL_PREFIX'] = '%s/../%s' % (os.getcwd(), self.install_libjpegturbo_arm_dir)
+                cmake.configure(source_dir='../%s/Source/LibJPEG' % self.source_dir,
+                                build_dir='.')
+                cmake.build()
+                cmake.install()
 
-                autotools.flags.append('-Oz')
-
-                if platform.system() == 'Darwin':
-                    autotools.flags.append('-mmacosx-version-min=10.10')
-                elif platform.system() == 'Linux':
-                    autotools.flags.append('-fPIC')
-
-                with tools.environment_append(env_vars):
-                    autotools.configure(build=False,
-                                        host=False,
-                                        args=['--quiet',
-                                              '--disable-shared',
-                                              '--prefix=%s' % os.getcwd()])
-                    autotools.make(args=['--quiet'])
-
+        self.output.info("=== Build freeimage for both x86_64 + arm64 ===")
         with tools.chdir(self.source_dir):
-            env_vars['CFLAGS'] = '-I' + ' -I'.join(self.deps_cpp_info['llvm'].include_paths)
-            env_vars['LIBRARIES_X86_64'] = '-stdlib=libc++ -L%s/lib -lc++ -lc++abi' % self.deps_cpp_info['llvm'].rootpath
+            if platform.system() == 'Darwin':
+                yasm = '/usr/local/bin/yasm'
+            elif platform.system() == 'Linux':
+                yasm = '/usr/bin/yasm'
+
+            env_vars = {
+                'CC' : self.deps_cpp_info['llvm'].rootpath + '/bin/clang',
+                'CXX': self.deps_cpp_info['llvm'].rootpath + '/bin/clang++ -stdlib=libc++',
+                'NASM': yasm,
+                'MACOSX_SYSROOT': self.deps_cpp_info['macos-sdk'].rootpath,
+            }
             with tools.environment_append(env_vars):
-                self.run('make -j9')
+                self.run('make -f Makefile.osx -j9 libfreeimage-3.18.0.dylib')
 
             if platform.system() == 'Darwin':
-                self.run('mv libfreeimage-%s.dylib-x86_64 libfreeimage.dylib' % self.source_version)
-                self.run('install_name_tool -change @rpath/libc++.dylib /usr/lib/libc++.1.dylib libfreeimage.dylib')
+                self.run('mv libfreeimage-%s.dylib libfreeimage.dylib' % self.freeimage_version)
+                self.run('install_name_tool -id @rpath/libfreeimage.dylib libfreeimage.dylib')
             elif platform.system() == 'Linux':
-                self.run('mv libfreeimage-%s.so libfreeimage.so' % self.source_version)
-
-            VuoUtils.fixLibs(self.libs, self.deps_cpp_info)
+                self.run('mv libfreeimage-%s.so libfreeimage.so' % self.freeimage_version)
 
     def package(self):
         if platform.system() == 'Darwin':
