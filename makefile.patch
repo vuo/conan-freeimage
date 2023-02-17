@@ -8,8 +8,9 @@ diff -ur source/FreeImage/Makefile.osx source/FreeImage2/Makefile.osx
 -# Find SDK path via xcode-select, backwards compatible with Xcode vers < 4.5
 -MACOSX_SYSROOT = $(shell xcrun --show-sdk-path)
  # Specify deployement target here
- MACOSX_DEPLOYMENT_TARGET = 10.11
- 
+-MACOSX_DEPLOYMENT_TARGET = 10.11
++MACOSX_DEPLOYMENT_TARGET = 10.12
+
  # General configuration variables:
 -CC_I386 = $(shell xcrun -find clang)
 -CC_X86_64 = $(shell xcrun -find clang)
@@ -22,7 +23,7 @@ diff -ur source/FreeImage/Makefile.osx source/FreeImage2/Makefile.osx
  MACOSX_DEPLOY = -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET)
 -COMPILERFLAGS = -Os -fexceptions -fvisibility=hidden -DNO_LCMS -D__ANSI__
 -COMPILERFLAGS_I386 = -arch i386
-+COMPILERFLAGS = -Os -fexceptions -fvisibility=hidden -DNO_LCMS -D__ANSI__ -DDISABLE_PERF_MEASUREMENT
++COMPILERFLAGS = -Oz -fexceptions -fvisibility=hidden -DNO_LCMS -D__ANSI__ -DDISABLE_PERF_MEASUREMENT
 +COMPILERFLAGS_ARM64 = -arch arm64 -DPNG_ARM_NEON_OPT=0
  COMPILERFLAGS_X86_64 = -arch x86_64
  COMPILERPPFLAGS = -Wno-ctor-dtor-privacy -D__ANSI__ -std=c++11 -stdlib=libc++ -Wc++11-narrowing
@@ -39,8 +40,8 @@ diff -ur source/FreeImage/Makefile.osx source/FreeImage2/Makefile.osx
  CPPFLAGS_X86_64 = $(COMPILERPPFLAGS) $(CFLAGS_X86_64)
 -LIBRARIES_I386 = $(MACOSX_DEPLOY) -Wl,-syslibroot $(MACOSX_SYSROOT)
 -LIBRARIES_X86_64 = $(MACOSX_DEPLOY) -Wl,-syslibroot $(MACOSX_SYSROOT)
-+LIBRARIES_ARM64 = $(MACOSX_DEPLOY) ../_build_libjpegturbo_arm/lib/libturbojpeg.a -Wl,-syslibroot $(MACOSX_SYSROOT)
-+LIBRARIES_X86_64 = $(MACOSX_DEPLOY) ../_build_libjpegturbo_x86/lib/libturbojpeg.a -Wl,-syslibroot $(MACOSX_SYSROOT)
++LIBRARIES_ARM64 = $(MACOSX_DEPLOY) ../_install_libjpegturbo_arm/libturbojpeg.a -Wl,-syslibroot $(MACOSX_SYSROOT)
++LIBRARIES_X86_64 = $(MACOSX_DEPLOY) ../_install_libjpegturbo_x86/libturbojpeg.a -Wl,-syslibroot $(MACOSX_SYSROOT)
  LIBTOOL = libtool
  LIPO = lipo
 @@ -37,10 +35,10 @@

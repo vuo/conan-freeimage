@@ -5,8 +5,8 @@ import os
 class FreeImageConan(ConanFile):
     name = 'freeimage'
 
-    freeimage_version = '3.18.0'
-    libjpegturbo_version = '2.0.5'
+    freeimage_version = '3.19.0'
+    libjpegturbo_version = '2.1.5.1'
     package_version = '0'
     version = '%s-%s' % (freeimage_version, package_version)
 
@@ -18,7 +18,7 @@ class FreeImageConan(ConanFile):
     url = 'http://freeimage.sourceforge.net/'
     license = 'http://freeimage.sourceforge.net/license.html'
     description = 'A library to read and write many image formats'
-    source_dir = 'FreeImage'
+    source_dir = 'freeimage-svn'
 
     build_libjpegturbo_x86_dir = '_build_libjpegturbo_x86'
     build_libjpegturbo_arm_dir = '_build_libjpegturbo_arm'
@@ -34,11 +34,10 @@ class FreeImageConan(ConanFile):
             raise Exception('Unknown platform "%s"' % platform.system())
 
     def source(self):
-        tools.get('http://downloads.sourceforge.net/freeimage/FreeImage3180.zip',
-                  sha256='f41379682f9ada94ea7b34fe86bf9ee00935a3147be41b6569c9605a53e438fd')
+        self.run('svn checkout https://svn.code.sf.net/p/freeimage/svn/FreeImage/trunk@1903 freeimage-svn')
+
         tools.patch(patch_file='makefile.patch', base_path=self.source_dir)
         tools.patch(patch_file='zlib.patch', base_path=self.source_dir)
-        tools.patch(patch_file='jxr.patch', base_path=self.source_dir)
         tools.patch(patch_file='jpeg.patch', base_path=self.source_dir)
         tools.replace_in_file('%s/Makefile.gnu' % self.source_dir, 'LIBRARIES = -lstdc++', 'LIBRARIES = -lc++')
 
@@ -46,7 +45,7 @@ class FreeImageConan(ConanFile):
         if platform.system() == 'Darwin':
             self.run('rm -Rf %s/Source/LibJPEG' % self.source_dir)
             tools.get('http://downloads.sourceforge.net/project/libjpeg-turbo/%s/libjpeg-turbo-%s.tar.gz' % (self.libjpegturbo_version, self.libjpegturbo_version),
-                      sha256='16f8f6f2715b3a38ab562a84357c793dd56ae9899ce130563c72cd93d8357b5d')
+                      sha256='2fdc3feb6e9deb17adec9bafa3321419aa19f8f4e5dea7bf8486844ca22207bf')
             self.run('mv libjpeg-turbo-%s %s/Source/LibJPEG' % (self.libjpegturbo_version, self.source_dir))
 
         with tools.chdir(self.source_dir):
@@ -56,6 +55,15 @@ class FreeImageConan(ConanFile):
         if platform.system() == 'Darwin':
             self.run('cp %s/Source/LibJPEG/LICENSE.md %s/libjpeg-turbo.txt' % (self.source_dir, self.source_dir))
 
+    def set_cmake_install_dirs(self, cmake, dir):
+        cmake.definitions['CMAKE_INSTALL_PREFIX'] = dir
+        cmake.definitions['CMAKE_INSTALL_BINDIR'] = dir
+        cmake.definitions['CMAKE_INSTALL_DATAROOTDIR'] = dir
+        cmake.definitions['CMAKE_INSTALL_DOCDIR'] = dir
+        cmake.definitions['CMAKE_INSTALL_INCLUDEDIR'] = dir
+        cmake.definitions['CMAKE_INSTALL_LIBDIR'] = dir
+        cmake.definitions['CMAKE_INSTALL_MANDIR'] = dir
+
     def build(self):
         if platform.system() == 'Darwin':
             cmake = CMake(self)
@@ -64,7 +72,7 @@ class FreeImageConan(ConanFile):
             cmake.definitions['CMAKE_C_COMPILER'] = '%s/bin/clang'   % self.deps_cpp_info['llvm'].rootpath
             cmake.definitions['CMAKE_C_FLAGS_RELEASE'] = '-Oz -DNDEBUG'
             cmake.definitions['CMAKE_INSTALL_NAME_DIR'] = '@rpath'
-            cmake.definitions['CMAKE_OSX_DEPLOYMENT_TARGET'] = '10.11'
+            cmake.definitions['CMAKE_OSX_DEPLOYMENT_TARGET'] = '10.12'
             cmake.definitions['CMAKE_OSX_SYSROOT'] = self.deps_cpp_info['macos-sdk'].rootpath
             cmake.definitions['ENABLE_SHARED'] = 'OFF'
             cmake.definitions['ENABLE_STATIC'] = 'ON'
@@ -73,7 +81,9 @@ class FreeImageConan(ConanFile):
             tools.mkdir(self.build_libjpegturbo_x86_dir)
             with tools.chdir(self.build_libjpegturbo_x86_dir):
                 cmake.definitions['CMAKE_OSX_ARCHITECTURES'] = 'x86_64'
-                cmake.definitions['CMAKE_INSTALL_PREFIX'] = '%s/../%s' % (os.getcwd(), self.install_libjpegturbo_x86_dir)
+                cmake.definitions['CMAKE_SYSTEM_NAME'] = 'Darwin'
+                cmake.definitions['CMAKE_SYSTEM_PROCESSOR'] = 'x86_64'
+                self.set_cmake_install_dirs(cmake, '%s/../%s' % (os.getcwd(), self.install_libjpegturbo_x86_dir))
                 cmake.configure(source_dir='../%s/Source/LibJPEG' % self.source_dir,
                                 build_dir='.')
                 cmake.build()
@@ -82,11 +92,10 @@ class FreeImageConan(ConanFile):
             self.output.info("=== Build libjpeg-turbo for arm64 ===")
             tools.mkdir(self.build_libjpegturbo_arm_dir)
             with tools.chdir(self.build_libjpegturbo_arm_dir):
-                cmake.definitions['CMAKE_CROSSCOMPILING'] = 'ON'
                 cmake.definitions['CMAKE_OSX_ARCHITECTURES'] = 'arm64'
                 cmake.definitions['CMAKE_SYSTEM_NAME'] = 'Darwin'
                 cmake.definitions['CMAKE_SYSTEM_PROCESSOR'] = 'arm64'
-                cmake.definitions['CMAKE_INSTALL_PREFIX'] = '%s/../%s' % (os.getcwd(), self.install_libjpegturbo_arm_dir)
+                self.set_cmake_install_dirs(cmake, '%s/../%s' % (os.getcwd(), self.install_libjpegturbo_arm_dir))
                 cmake.configure(source_dir='../%s/Source/LibJPEG' % self.source_dir,
                                 build_dir='.')
                 cmake.build()
@@ -106,7 +115,7 @@ class FreeImageConan(ConanFile):
                 'MACOSX_SYSROOT': self.deps_cpp_info['macos-sdk'].rootpath,
             }
             with tools.environment_append(env_vars):
-                self.run('make -f Makefile.osx -j9 libfreeimage-3.18.0.dylib')
+                self.run('make -f Makefile.osx -j9 libfreeimage-%s.dylib' % self.freeimage_version)
 
             if platform.system() == 'Darwin':
                 self.run('mv libfreeimage-%s.dylib libfreeimage.dylib' % self.freeimage_version)
